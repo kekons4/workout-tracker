@@ -1,34 +1,65 @@
 const router = require('express').Router();
-const Exercise = require('../../models/exercise.js');
+const { Workout, Exercises } = require('../../models');
+const db = require('mongoose');
 
-router.get('/', async ({body}, res) => {
-    Exercise.find({})
-        .then(dbExercise => {
-            res.status(200).json(dbExercise);
-        })
-        .catch(err => {
-            res.status(500).json(err);
-        });
+// Get Last workout
+router.get('/', ({body}, res) => {
+    Workout.aggregate([
+        {
+            $addFields: {
+                totalDuration: {$sum: "$exercises.duration"},
+                totalWeight: {$sum: "$exercises.weight"}
+            }
+        }
+    ])
+    .then(workoutDB => {
+        res.status(200).json(workoutDB);
+    })
+    .catch(err => {
+        res.status(500).json(err);
+    });
 });
 
-router.post('/', async ({ body }, res) => {
-    Exercise.create(body)
-        .then(dbExercise => {
-            res.status(200).json(dbExercise);
+// Create new Workout
+router.post('/', ({ body }, res) => {
+    Workout.create(body)
+        .then(dbWorkout => {
+            res.status(200).json(dbWorkout);
         })
         .catch(err => {
             res.status(400).json(err);
         });
 });
 
-router.put('/:id', async ({ body }, res) => {
-    Exercise.create(body)
-        .then(dbExercise => {
-            res.status(200).json(dbExercise);
+// Add Exercise
+router.put('/:id', (req, res) => {
+    const {params: {id}, body } = req;
+    Workout.findOneAndUpdate({_id: id}, { $push: { exercises: body } }, { new: true })
+        .then(dbWorkout => {
+            res.status(200).json(dbWorkout);
         })
         .catch(err => {
+            console.error(err);
             res.status(400).json(err);
         });
+});
+
+// Fetch all workouts
+router.get('/range', (req, res) => {
+    Workout.aggregate([
+        {
+            $addFields: {
+                totalDuration: {$sum: "$exercises.duration"},
+                totalWeight: {$sum: "$exercises.weight"}
+            }
+        }
+    ])
+    .then(workoutDB => {
+        res.status(200).json(workoutDB);
+    })
+    .catch(err => {
+        res.status(500).json(err);
+    });
 });
 
 module.exports = router;
